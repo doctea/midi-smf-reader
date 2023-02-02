@@ -5,8 +5,8 @@
 #define MIDI_SMF_READER_MIDIREADER_H
 
 #include <vector>
-#include <functional>
-#include <algorithm>
+//#include <functional>
+//#include <algorithm>
 #include <Arduino.h>
 #include <SD.h>
 #include <string>

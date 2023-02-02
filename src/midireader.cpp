@@ -15,8 +15,10 @@ struct smf_header {
 uint32_t varfieldGet(File &file, uint16_t &progress);
 
 bool midireader::open(const char *filename) {
-    if (!SD.exists(filename))
+    if (!SD.exists(filename)) {
+        Serial.printf("filename '%s' doesn't exist!\n", filename);
         return false;
+    }
 
     _current_track = -1;
     _currentTrackOffset = 0;
@@ -26,23 +28,30 @@ bool midireader::open(const char *filename) {
 
     _midifile = SD.open(filename);
 
-    if (!_midifile)
-        return false;
-
-    unsigned char buffer[6];
-    if (_midifile.read(buffer, 4) != 4) {
+    if (!_midifile) {
+        Serial.printf("couldn't open file %s\n", filename);
         return false;
     }
 
-    if (buffer[0] != 'M' || buffer[1] != 'T' || buffer[2] != 'h' || buffer[3] != 'd')
+    unsigned char buffer[6];
+    if (_midifile.read(buffer, 4) != 4) {
+        Serial.printf("couldn't read 4 bytes from %s\n", filename);
         return false;
+    }
+
+    if (buffer[0] != 'M' || buffer[1] != 'T' || buffer[2] != 'h' || buffer[3] != 'd') {
+        Serial.printf("header bytes MThd not found in %s (got %0x %0x %0x %0x)\n", filename, buffer[0], buffer[1], buffer[2], buffer[3]);
+        return false;
+    }
 
     if (_midifile.read(buffer, 4) != 4) {
+        Serial.println("failed to read next 4 bytes");
         return false;
     }
 
     auto header_length = static_cast<unsigned long>(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);
     if (header_length != 6) {
+        Serial.printf("got header_length of %i (expected 6)\n", header_length);
         return false;
     }
 
@@ -67,8 +76,10 @@ bool midireader::open(const char *filename) {
     for (uint16_t i = 0; i < header.num_tracks; i++) {
         _midifile.read(buffer, 4);
 
-        if (buffer[0] != 'M' || buffer[1] != 'T' || buffer[2] != 'r' || buffer[3] != 'k')
+        if (buffer[0] != 'M' || buffer[1] != 'T' || buffer[2] != 'r' || buffer[3] != 'k') {
+            Serial.printf("bytes MTrk not found (got %0x %0x %0x %0x)\n", buffer[0], buffer[1], buffer[2], buffer[3]);
             return false;
+        }
 
         _midifile.read(buffer, 4);
         auto track_length = static_cast<unsigned long>(buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3]);;
